@@ -20,6 +20,7 @@
 #include "fast/Fast3dWindow.h"
 
 #ifdef __WIIU__
+#include <coreinit/debug.h>
 #include <gx2/registers.h>
 #include "ship/port/wiiu/ImGui/imgui_impl_gx2.h"
 #include "ship/port/wiiu/ImGui/imgui_impl_wiiu.h"
@@ -172,7 +173,9 @@ void Gui::ImGuiWMInit() {
     switch (Context::GetInstance()->GetWindow()->GetWindowBackend()) {
 #ifdef __WIIU__
         case WindowBackend::FAST3D_WIIU_GX2:
-            ImGui_ImplWiiU_Init();
+            if (!ImGui_ImplWiiU_Init()) {
+                OSFatal("Could not initialize the Wii U user interface.");
+            }
             break;
 #else
         case WindowBackend::FAST3D_SDL_OPENGL:

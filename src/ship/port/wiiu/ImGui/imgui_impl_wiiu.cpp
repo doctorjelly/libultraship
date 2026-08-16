@@ -20,7 +20,8 @@ struct ImGui_ImplWiiU_Data
     bool WantedTextInput;
     bool WasTouched;
 
-    ImGui_ImplWiiU_Data()   { memset((void*)this, 0, sizeof(*this)); }
+    ImGui_ImplWiiU_Data()
+        : CreateArg{}, AppearArg{}, LastController{}, InitialText{}, WantedTextInput(false), WasTouched(false) {}
 };
 
 // Backend data stored in io.BackendPlatformUserData
@@ -41,7 +42,7 @@ bool     ImGui_ImplWiiU_Init()
     io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
 
     // Initialize and create software keyboard
-    nn::swkbd::CreateArg createArg;
+    nn::swkbd::CreateArg createArg{};
 
     createArg.workMemory = malloc(nn::swkbd::GetWorkMemorySize(0));
     createArg.fsClient = (FSClient*) malloc(sizeof(FSClient));
@@ -49,15 +50,37 @@ bool     ImGui_ImplWiiU_Init()
     {
         free(createArg.workMemory);
         free(createArg.fsClient);
+        io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
+        io.BackendPlatformName = NULL;
+        io.BackendPlatformUserData = NULL;
+        IM_DELETE(bd);
         return false;
     }
 
-    FSAddClient(createArg.fsClient, FS_ERROR_FLAG_NONE);
+    if (FSAddClient(createArg.fsClient, FS_ERROR_FLAG_NONE) != FS_STATUS_OK)
+    {
+        free(createArg.fsClient);
+        free(createArg.workMemory);
+        io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
+        io.BackendPlatformName = NULL;
+        io.BackendPlatformUserData = NULL;
+        IM_DELETE(bd);
+        return false;
+    }
 
     if (!nn::swkbd::Create(createArg))
+    {
+        FSDelClient(createArg.fsClient, FS_ERROR_FLAG_NONE);
+        free(createArg.fsClient);
+        free(createArg.workMemory);
+        io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
+        io.BackendPlatformName = NULL;
+        io.BackendPlatformUserData = NULL;
+        IM_DELETE(bd);
         return false;
+    }
 
-    nn::swkbd::AppearArg appearArg;
+    nn::swkbd::AppearArg appearArg{};
     bd->CreateArg = createArg;
     bd->AppearArg = appearArg;
 
@@ -84,6 +107,7 @@ void     ImGui_ImplWiiU_Shutdown()
 
     io.BackendPlatformName = NULL;
     io.BackendPlatformUserData = NULL;
+    io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
     IM_DELETE(bd);
 }
 

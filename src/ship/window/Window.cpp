@@ -31,7 +31,9 @@ Window::Window() : Window(std::vector<std::shared_ptr<GuiWindow>>()) {
 }
 
 Window::~Window() {
+#ifndef __WIIU__
     mGui->ShutDownImGui(this);
+#endif
     SPDLOG_DEBUG("destruct window");
 }
 

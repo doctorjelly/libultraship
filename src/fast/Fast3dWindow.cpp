@@ -58,6 +58,11 @@ Fast3dWindow::Fast3dWindow() : Fast3dWindow(std::vector<std::shared_ptr<Ship::Gu
 
 Fast3dWindow::~Fast3dWindow() {
     SPDLOG_DEBUG("destruct fast3dwindow");
+#ifdef __WIIU__
+    // The GX2 ImGui backend owns GPU resources, so release them before the
+    // interpreter tears down the GX2 renderer and window backend.
+    GetGui()->ShutDownImGui(this);
+#endif
     mInterpreter->Destroy();
     delete mRenderingApi;
     delete mWindowManagerApi;
