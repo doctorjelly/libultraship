@@ -1,3 +1,7 @@
+# CafeOS has no desktop shell or POSIX process launcher. Without this official
+# ImGui guard, imgui.cpp pulls in waitpid/execvp and the final RPX link fails.
+target_compile_definitions(ImGui PRIVATE IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS)
+
 #=================== nlohmann-json ===================
 find_package(nlohmann_json QUIET)
 if (NOT ${nlohmann_json_FOUND})
