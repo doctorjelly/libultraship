@@ -21,6 +21,8 @@
 #include "ship/utils/AppleFolderManager.h"
 #include <unistd.h>
 #include <pwd.h>
+#elif defined(__WIIU__)
+#include "ship/port/wiiu/WiiUImpl.h"
 #endif
 
 namespace Ship {
@@ -142,9 +144,11 @@ bool Context::InitLogging(spdlog::level::level_enum debugBuildLogLevel,
         sinks.push_back(systemConsoleSink);
 #endif
 
+#ifndef __WIIU__
         auto logPath = GetPathRelativeToAppDirectory(("logs/" + GetName() + ".log"));
         auto fileSink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(logPath, 1024 * 1024 * 10, 10);
         sinks.push_back(fileSink);
+#endif
 #ifdef _DEBUG
         mLogger = std::make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
         GetLogger()->set_level(debugBuildLogLevel);
@@ -155,7 +159,11 @@ bool Context::InitLogging(spdlog::level::level_enum debugBuildLogLevel,
         GetLogger()->set_level(releaseBuildLogLevel);
         GetLogger()->flush_on(spdlog::level::info);
 #endif
+#ifndef __WIIU__
         GetLogger()->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%@] [%l] %v");
+#else
+        GetLogger()->set_pattern("[%s:%#] [%l] %v");
+#endif
 
         spdlog::register_logger(GetLogger());
         spdlog::set_default_logger(GetLogger());
@@ -218,12 +226,16 @@ bool Context::InitResourceManager(const std::vector<std::string>& archivePaths,
     }
 
     if (!allowEmptyPaths && !GetResourceManager()->IsLoaded()) {
+#if defined(__WIIU__)
+        Ship::WiiU::ThrowMissingOTR(mMainPath.c_str());
+#else
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "OTR file not found",
                                  "Main OTR file not found. Please generate one", nullptr);
         SPDLOG_ERROR("Main OTR file not found!");
 #ifdef __IOS__
         // We need this exit to close the app when we dismiss the dialog
         exit(0);
+#endif
 #endif
         return false;
     }

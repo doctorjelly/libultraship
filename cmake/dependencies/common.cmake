@@ -27,11 +27,13 @@ target_sources(ImGui
     ${imgui_SOURCE_DIR}/imgui.cpp
 )
 
-target_sources(ImGui
-    PRIVATE
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl2.cpp
-)
+if (NOT CMAKE_SYSTEM_NAME STREQUAL "CafeOS")
+    target_sources(ImGui
+        PRIVATE
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl2.cpp
+    )
+endif()
 
 target_include_directories(ImGui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends PRIVATE ${SDL2_INCLUDE_DIRS})
 
@@ -61,6 +63,10 @@ target_sources(stb PRIVATE
     ${STB_DIR}/stb_image.h
     ${STB_DIR}/stb_impl.c
 )
+
+if (CMAKE_SYSTEM_NAME STREQUAL "CafeOS")
+    target_compile_definitions(stb PUBLIC STBI_NO_THREAD_LOCALS)
+endif()
 
 target_include_directories(stb PUBLIC ${STB_DIR})
 list(APPEND ADDITIONAL_LIB_INCLUDES ${STB_DIR})
@@ -93,21 +99,22 @@ if (GFX_DEBUG_DISASSEMBLER)
     target_include_directories(libgfxd PUBLIC ${libgfxd_SOURCE_DIR})
 endif()
 
-#======== thread-pool ========
-FetchContent_Declare(
-    ThreadPool
-    GIT_REPOSITORY https://github.com/bshoshany/thread-pool.git
-    GIT_TAG v4.1.0
-)
-FetchContent_MakeAvailable(ThreadPool)
+if (NOT CMAKE_SYSTEM_NAME STREQUAL "CafeOS")
+    #======== thread-pool ========
+    FetchContent_Declare(
+        ThreadPool
+        GIT_REPOSITORY https://github.com/bshoshany/thread-pool.git
+        GIT_TAG v4.1.0
+    )
+    FetchContent_MakeAvailable(ThreadPool)
+    list(APPEND ADDITIONAL_LIB_INCLUDES ${threadpool_SOURCE_DIR}/include)
 
-list(APPEND ADDITIONAL_LIB_INCLUDES ${threadpool_SOURCE_DIR}/include)
-
-#=========== prism ===========
-option(PRISM_STANDALONE "Build prism as a standalone library" OFF)
-FetchContent_Declare(
-    prism
-    GIT_REPOSITORY https://github.com/KiritoDv/prism-processor.git
-    GIT_TAG bbcbc7e3f890a5806b579361e7aa0336acd547e7
-)
-FetchContent_MakeAvailable(prism)
+    #=========== prism ===========
+    option(PRISM_STANDALONE "Build prism as a standalone library" OFF)
+    FetchContent_Declare(
+        prism
+        GIT_REPOSITORY https://github.com/KiritoDv/prism-processor.git
+        GIT_TAG bbcbc7e3f890a5806b579361e7aa0336acd547e7
+    )
+    FetchContent_MakeAvailable(prism)
+endif()

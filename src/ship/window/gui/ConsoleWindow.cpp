@@ -498,7 +498,11 @@ void ConsoleWindow::DrawElement() {
         constexpr ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackEdit |
                                               ImGuiInputTextFlags_CallbackCompletion |
                                               ImGuiInputTextFlags_CallbackHistory;
+#ifdef __WIIU__
+        ImGui::PushItemWidth(-106.0f);
+#else
         ImGui::PushItemWidth(-53.0f);
+#endif
 
         float yBeforeInput = ImGui::GetCursorPosY();
 

@@ -18,6 +18,14 @@
 
 #include "libultraship/window/gui/GfxDebuggerWindow.h"
 #include "fast/Fast3dWindow.h"
+
+#ifdef __WIIU__
+#include <gx2/registers.h>
+#include "ship/port/wiiu/ImGui/imgui_impl_gx2.h"
+#include "ship/port/wiiu/ImGui/imgui_impl_wiiu.h"
+#include "fast/backends/gfx_wiiu.h"
+#endif
+
 #ifdef __APPLE__
 #include <SDL_hints.h>
 #include <SDL_video.h>
@@ -119,6 +127,13 @@ void Gui::Init(GuiWindowInitData windowImpl) {
     mImGuiIo->FontGlobalScale = 2.0f;
 #endif
 
+#ifdef __WIIU__
+    // The TV and GamePad render targets are high-DPI relative to desktop defaults.
+    ImGui::GetStyle().ScaleAllSizes(2.0f);
+    mImGuiIo->FontGlobalScale = 2.0f;
+    mImGuiIo->DisplaySize = ImVec2(mImpl.Gx2.Width, mImpl.Gx2.Height);
+#endif
+
     mImGuiIniPath = Context::GetPathRelativeToAppDirectory("imgui.ini");
     mImGuiLogPath = Context::GetPathRelativeToAppDirectory("imgui_log.txt");
     mImGuiIo->IniFilename = mImGuiIniPath.c_str();
@@ -155,6 +170,11 @@ void Gui::Init(GuiWindowInitData windowImpl) {
 
 void Gui::ImGuiWMInit() {
     switch (Context::GetInstance()->GetWindow()->GetWindowBackend()) {
+#ifdef __WIIU__
+        case WindowBackend::FAST3D_WIIU_GX2:
+            ImGui_ImplWiiU_Init();
+            break;
+#else
         case WindowBackend::FAST3D_SDL_OPENGL:
             SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "1");
             if (Ship::Context::GetInstance()->GetConsoleVariables()->GetInteger(CVAR_ALLOW_BACKGROUND_INPUTS, 1)) {
@@ -162,6 +182,7 @@ void Gui::ImGuiWMInit() {
             }
             ImGui_ImplSDL2_InitForOpenGL(static_cast<SDL_Window*>(mImpl.Opengl.Window), mImpl.Opengl.Context);
             break;
+#endif
 #if __APPLE__
         case WindowBackend::FAST3D_SDL_METAL:
             SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "1");
@@ -183,6 +204,12 @@ void Gui::ImGuiWMInit() {
 
 void Gui::ShutDownImGui(Ship::Window* window) {
     switch (window->GetWindowBackend()) {
+#ifdef __WIIU__
+        case WindowBackend::FAST3D_WIIU_GX2:
+            ImGui_ImplGX2_Shutdown();
+            ImGui_ImplWiiU_Shutdown();
+            break;
+#endif
 #ifdef ENABLE_OPENGL
         case WindowBackend::FAST3D_SDL_OPENGL:
             ImGui_ImplSDL2_Shutdown();
@@ -207,6 +234,11 @@ void Gui::ShutDownImGui(Ship::Window* window) {
 
 void Gui::ImGuiBackendInit() {
     switch (Context::GetInstance()->GetWindow()->GetWindowBackend()) {
+#ifdef __WIIU__
+        case WindowBackend::FAST3D_WIIU_GX2:
+            ImGui_ImplGX2_Init();
+            break;
+#endif
 #ifdef ENABLE_OPENGL
         case WindowBackend::FAST3D_SDL_OPENGL:
 #ifdef __APPLE__
@@ -272,7 +304,7 @@ bool Gui::SupportsViewports() {
     }
 #endif
 
-#if defined(__ANDROID__) || defined(__IOS__)
+#if defined(__ANDROID__) || defined(__IOS__) || defined(__WIIU__)
     return false;
 #endif
 
@@ -289,6 +321,11 @@ bool Gui::SupportsViewports() {
 
 void Gui::HandleWindowEvents(WindowEvent event) {
     switch (Context::GetInstance()->GetWindow()->GetWindowBackend()) {
+#ifdef __WIIU__
+        case WindowBackend::FAST3D_WIIU_GX2:
+            ImGui_ImplWiiU_ProcessInput(static_cast<ImGui_ImplWiiU_ControllerInput*>(event.Gx2.Input));
+            break;
+#else
         case WindowBackend::FAST3D_SDL_OPENGL:
         case WindowBackend::FAST3D_SDL_METAL:
             ImGui_ImplSDL2_ProcessEvent(static_cast<const SDL_Event*>(event.Sdl.Event));
@@ -296,6 +333,7 @@ void Gui::HandleWindowEvents(WindowEvent event) {
             Mobile::ImGuiProcessEvent(mImGuiIo->WantTextInput);
 #endif
             break;
+#endif
 #ifdef ENABLE_DX11
         case WindowBackend::FAST3D_DXGI_DX11:
             ImGui_ImplWin32_WndProcHandler(static_cast<HWND>(event.Win32.Handle), event.Win32.Msg, event.Win32.Param1,
@@ -337,6 +375,12 @@ ImGuiID Gui::GetMainGameWindowID() {
 
 void Gui::ImGuiBackendNewFrame() {
     switch (Context::GetInstance()->GetWindow()->GetWindowBackend()) {
+#ifdef __WIIU__
+        case WindowBackend::FAST3D_WIIU_GX2:
+            mImGuiIo->DeltaTime = static_cast<float>(Fast::frametime) / 1000000.0f;
+            ImGui_ImplGX2_NewFrame();
+            break;
+#endif
 #ifdef ENABLE_OPENGL
         case WindowBackend::FAST3D_SDL_OPENGL:
             ImGui_ImplOpenGL3_NewFrame();
@@ -365,10 +409,15 @@ void Gui::ImGuiBackendNewFrame() {
 
 void Gui::ImGuiWMNewFrame() {
     switch (Context::GetInstance()->GetWindow()->GetWindowBackend()) {
+#ifdef __WIIU__
+        case WindowBackend::FAST3D_WIIU_GX2:
+            break;
+#else
         case WindowBackend::FAST3D_SDL_OPENGL:
         case WindowBackend::FAST3D_SDL_METAL:
             ImGui_ImplSDL2_NewFrame();
             break;
+#endif
 #ifdef ENABLE_DX11
         case WindowBackend::FAST3D_DXGI_DX11:
             ImGui_ImplWin32_NewFrame();
@@ -806,6 +855,14 @@ ImVec2 Gui::GetTextureSize(const std::string& name) {
 
 void Gui::ImGuiRenderDrawData(ImDrawData* data) {
     switch (Context::GetInstance()->GetWindow()->GetWindowBackend()) {
+#ifdef __WIIU__
+        case WindowBackend::FAST3D_WIIU_GX2:
+            ImGui_ImplGX2_RenderDrawData(data);
+            GX2SetViewport(0.0f, 0.0f, mImGuiIo->DisplaySize.x, mImGuiIo->DisplaySize.y, 0.0f, 1.0f);
+            GX2SetScissor(0, 0, mImGuiIo->DisplaySize.x, mImGuiIo->DisplaySize.y);
+            ImGui_ImplWiiU_DrawKeyboardOverlay();
+            break;
+#endif
 
 #ifdef ENABLE_OPENGL
         case WindowBackend::FAST3D_SDL_OPENGL:

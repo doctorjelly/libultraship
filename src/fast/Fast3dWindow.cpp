@@ -12,6 +12,10 @@
 #include "fast/backends/gfx_direct3d_common.h"
 #include "fast/backends/gfx_direct3d11.h"
 #include "fast/backends/gfx_window_manager_api.h"
+#ifdef __WIIU__
+#include "fast/backends/gfx_gx2.h"
+#include "fast/backends/gfx_wiiu.h"
+#endif
 
 #include <fstream>
 
@@ -26,6 +30,9 @@ Fast3dWindow::Fast3dWindow(std::shared_ptr<Ship::Gui> gui, std::shared_ptr<FastM
     mInterpreter = std::make_shared<Interpreter>();
     GfxSetInstance(mInterpreter);
 
+#ifdef __WIIU__
+    AddAvailableWindowBackend(Ship::WindowBackend::FAST3D_WIIU_GX2);
+#else
 #ifdef _WIN32
     AddAvailableWindowBackend(Ship::WindowBackend::FAST3D_DXGI_DX11);
 #endif
@@ -35,6 +42,7 @@ Fast3dWindow::Fast3dWindow(std::shared_ptr<Ship::Gui> gui, std::shared_ptr<FastM
     }
 #endif
     AddAvailableWindowBackend(Ship::WindowBackend::FAST3D_SDL_OPENGL);
+#endif
 }
 
 Fast3dWindow::Fast3dWindow(std::shared_ptr<Ship::Gui> gui)
@@ -72,7 +80,7 @@ void Fast3dWindow::Init() {
             }
         }
     }
-#elif defined(__ANDROID__) || defined(__IOS__)
+#elif defined(__ANDROID__) || defined(__IOS__) || defined(__WIIU__)
     gameMode = true;
 #endif
 
@@ -131,6 +139,12 @@ void Fast3dWindow::InitWindowManager() {
     SetWindowBackend(Ship::Context::GetInstance()->GetConfig()->GetWindowBackend());
 
     switch (GetWindowBackend()) {
+#ifdef __WIIU__
+        case Ship::WindowBackend::FAST3D_WIIU_GX2:
+            mRenderingApi = new GfxRenderingAPIGX2();
+            mWindowManagerApi = new GfxWindowBackendWiiU();
+            break;
+#endif
 #ifdef ENABLE_DX11
         case Ship::WindowBackend::FAST3D_DXGI_DX11:
             mWindowManagerApi = new GfxWindowBackendDXGI();
