@@ -58,7 +58,7 @@ struct ShaderProgram {
     int32_t samplers_location[SHADER_MAX_TEXTURES];
 };
 
-struct Texture {
+struct GX2TextureState {
     GX2Texture texture;
     bool texture_uploaded;
 
@@ -90,7 +90,7 @@ static GX2DepthBuffer depthReadBuffer;
 static std::map<std::pair<uint64_t, uint32_t>, struct ShaderProgram> shader_program_pool;
 static struct ShaderProgram* current_shader_program;
 
-static struct Texture* current_texture;
+static struct GX2TextureState* current_texture;
 static int current_tile;
 
 // 96 Mb (should be more than enough to draw everything without waiting for the GPU)
@@ -246,7 +246,8 @@ static void gfx_gx2_shader_get_info(struct ShaderProgram* prg, uint8_t* num_inpu
 }
 
 static uint32_t gfx_gx2_new_texture(void) {
-    struct Texture* tex = (struct Texture*)calloc(1, sizeof(struct Texture));
+    struct GX2TextureState* tex =
+        static_cast<struct GX2TextureState*>(calloc(1, sizeof(struct GX2TextureState)));
 
     tex->imtex.Texture = &tex->texture;
     tex->imtex.Sampler = &tex->sampler;
@@ -256,7 +257,7 @@ static uint32_t gfx_gx2_new_texture(void) {
 }
 
 static void gfx_gx2_delete_texture(uint32_t texture_id) {
-    struct Texture* tex = (struct Texture*)texture_id;
+    struct GX2TextureState* tex = reinterpret_cast<struct GX2TextureState*>(texture_id);
 
     if (tex->texture.surface.image) {
         free(tex->texture.surface.image);
@@ -266,7 +267,7 @@ static void gfx_gx2_delete_texture(uint32_t texture_id) {
 }
 
 static void gfx_gx2_select_texture(int tile, uint32_t texture_id) {
-    struct Texture* tex = (struct Texture*)texture_id;
+    struct GX2TextureState* tex = reinterpret_cast<struct GX2TextureState*>(texture_id);
     current_texture = tex;
     current_tile = tile;
 
@@ -285,7 +286,7 @@ static void gfx_gx2_select_texture(int tile, uint32_t texture_id) {
 }
 
 static void gfx_gx2_upload_texture(const uint8_t* rgba32_buf, uint32_t width, uint32_t height) {
-    struct Texture* tex = current_texture;
+    struct GX2TextureState* tex = current_texture;
     assert(tex);
 
     if ((tex->texture.surface.width != width) || (tex->texture.surface.height != height) ||
@@ -350,7 +351,7 @@ static GX2TexClampMode gfx_cm_to_gx2(uint32_t val) {
 }
 
 static void gfx_gx2_set_sampler_parameters(int tile, bool linear_filter, uint32_t cms, uint32_t cmt) {
-    struct Texture* tex = current_texture;
+    struct GX2TextureState* tex = current_texture;
     assert(tex);
 
     current_tile = tile;
@@ -899,7 +900,7 @@ FilteringMode gfx_gx2_get_texture_filter(void) {
 }
 
 ImGui_ImplGX2_Texture* GfxGX2TextureForImGui(uint32_t texture_id) {
-    struct Texture* tex = (struct Texture*)texture_id;
+    struct GX2TextureState* tex = reinterpret_cast<struct GX2TextureState*>(texture_id);
     return &tex->imtex;
 }
 

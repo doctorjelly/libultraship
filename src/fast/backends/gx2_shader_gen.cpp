@@ -330,7 +330,8 @@ static void append_tex_clamp(struct RegTable* tbl, uint64_t **alu_ptr, uint8_t t
     }
 }
 
-static void append_formula(struct RegTable* tbl, uint64_t **alu_ptr, uint8_t c[2][4], bool do_single, bool do_multiply, bool do_mix, bool only_alpha) {
+static void append_formula(struct RegTable* tbl, uint64_t **alu_ptr, const int c[2][4], bool do_single,
+                           bool do_multiply, bool do_mix, bool only_alpha) {
     if (do_single) {
         add_mov(tbl, alu_ptr, c[only_alpha][3], only_alpha);
     } else if (do_multiply) {
@@ -449,7 +450,7 @@ static GX2SamplerVar samplerVars[] = {
 
 static int generatePixelShader(GX2PixelShader *psh, struct CCFeatures *cc_features) {
     static const size_t max_program_buf_size = 512 * sizeof(uint64_t);
-    uint64_t *program_buf = memalign(GX2_SHADER_PROGRAM_ALIGNMENT, max_program_buf_size);
+    uint64_t *program_buf = static_cast<uint64_t*>(memalign(GX2_SHADER_PROGRAM_ALIGNMENT, max_program_buf_size));
     if (!program_buf) {
         return -1;
     }
@@ -822,7 +823,7 @@ static GX2AttribVar attribVars[] = {
 
 static int generateVertexShader(GX2VertexShader *vsh, struct CCFeatures *cc_features) {
     static const size_t max_program_buf_size = 16 * sizeof(uint64_t);
-    uint64_t *program_buf = memalign(GX2_SHADER_PROGRAM_ALIGNMENT, max_program_buf_size);
+    uint64_t *program_buf = static_cast<uint64_t*>(memalign(GX2_SHADER_PROGRAM_ALIGNMENT, max_program_buf_size));
     if (!program_buf) {
         return -1;
     }
@@ -964,7 +965,8 @@ int gx2GenerateShaderGroup(struct ShaderGroup *group, struct CCFeatures *cc_feat
         return -1;
     }
 
-    GX2InitFetchShaderEx(&group->fetchShader, group->fetchShader.program, group->numAttributes, group->attributes, GX2_FETCH_SHADER_TESSELLATION_NONE, GX2_TESSELLATION_MODE_DISCRETE);
+    GX2InitFetchShaderEx(&group->fetchShader, static_cast<uint8_t*>(group->fetchShader.program), group->numAttributes,
+                         group->attributes, GX2_FETCH_SHADER_TESSELLATION_NONE, GX2_TESSELLATION_MODE_DISCRETE);
 
     // invalidate all programs
     GX2Invalidate(GX2_INVALIDATE_MODE_CPU_SHADER, group->vertexShader.program, group->vertexShader.size);
