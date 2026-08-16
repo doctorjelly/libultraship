@@ -24,17 +24,6 @@
 
  # ---------------------------------------------------------------------------------------
  # Use fmt package if using external fmt
---- a/cmake/spdlogConfig.cmake.in
-+++ b/cmake/spdlogConfig.cmake.in
-@@ -3,8 +3,6 @@
-
- @PACKAGE_INIT@
-
--find_package(Threads REQUIRED)
--
- set(SPDLOG_FMT_EXTERNAL @SPDLOG_FMT_EXTERNAL@)
- set(SPDLOG_FMT_EXTERNAL_HO @SPDLOG_FMT_EXTERNAL_HO@)
- set(config_targets_file @config_targets_file@)
 --- a/include/spdlog/details/udp_client.h
 +++ b/include/spdlog/details/udp_client.h
 @@ -14,7 +14,6 @@

@@ -117,7 +117,7 @@ static uint32_t current_scissor_width = WIIU_DEFAULT_FB_WIDTH;
 static uint32_t current_scissor_height = WIIU_DEFAULT_FB_HEIGHT;
 
 static bool current_zmode_decal = false;
-static bool current_SSDB = -2.0f;
+static float current_SSDB = -2.0f;
 static bool current_use_alpha = false;
 
 static inline GX2SamplerVar* GX2GetPixelSamplerVar(const GX2PixelShader* shader, const char* name) {

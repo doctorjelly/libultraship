@@ -454,7 +454,7 @@ static double gfx_wiiu_get_time(void) {
 
 static void gfx_wiiu_set_target_fps(int fps) {
     // use the nearest divisor
-    int divisor = 60 / fps;
+    int divisor = fps > 0 ? 60 / fps : 1;
     if (divisor < 1) {
         divisor = 1;
     }

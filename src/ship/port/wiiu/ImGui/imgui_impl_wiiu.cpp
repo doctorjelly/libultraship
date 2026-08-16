@@ -7,12 +7,15 @@
 // Software keyboard
 #include <nn/swkbd.h>
 
+static_assert(sizeof(ImWchar) == sizeof(char16_t), "Wii U software keyboard requires 16-bit ImWchar");
+
 // Wii U Data
 struct ImGui_ImplWiiU_Data
 {
     nn::swkbd::CreateArg CreateArg;
     nn::swkbd::AppearArg AppearArg;
     nn::swkbd::ControllerType LastController;
+    ImVector<ImWchar> InitialText;
 
     bool WantedTextInput;
     bool WasTouched;
@@ -90,10 +93,17 @@ static void ImGui_ImplWiiU_AppearKeyboardInput()
     ImGuiInputTextState* state = ImGui::GetInputTextState(ImGui::GetActiveID());
     if (state)
     {
+        bd->AppearArg.inputFormArg.initialText = NULL;
         if (!(state->Flags & ImGuiInputTextFlags_AlwaysOverwrite))
-            bd->AppearArg.inputFormArg.initialText = (char16_t*) state->TextW.Data;
+        {
+            const char* text_end = state->TextA.Data + state->TextLen;
+            const int text_length = ImTextCountCharsFromUtf8(state->TextA.Data, text_end);
+            bd->InitialText.resize(text_length + 1);
+            ImTextStrFromUtf8(bd->InitialText.Data, bd->InitialText.Size, state->TextA.Data, text_end);
+            bd->AppearArg.inputFormArg.initialText = reinterpret_cast<char16_t*>(bd->InitialText.Data);
+        }
 
-        bd->AppearArg.inputFormArg.maxTextLength = state->BufCapacityA;
+        bd->AppearArg.inputFormArg.maxTextLength = state->BufCapacity > 0 ? state->BufCapacity - 1 : 0;
         bd->AppearArg.inputFormArg.higlightInitialText = !!(state->Flags & ImGuiInputTextFlags_AutoSelectAll);
 
         if (state->Flags & ImGuiInputTextFlags_Password)

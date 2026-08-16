@@ -75,6 +75,11 @@ void Init(const std::string& shortName) {
 }
 
 void Exit() {
+    for (auto& [index, controller] : controllers) {
+        SDL_GameControllerClose(controller);
+    }
+    controllers.clear();
+
     SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
 
 #ifdef _DEBUG
