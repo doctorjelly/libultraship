@@ -78,6 +78,9 @@ if (CMAKE_SYSTEM_NAME STREQUAL "CafeOS")
         ${CMAKE_CURRENT_SOURCE_DIR}/port/wiiu/ImGui/imgui_impl_gx2.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/port/wiiu/ImGui/imgui_impl_wiiu.cpp
     )
+    set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/port/wiiu/WiiUImpl.cpp PROPERTIES
+        COMPILE_DEFINITIONS "$<$<BOOL:${SOH_WIIU_DEBUG_TELEMETRY}>:SOH_WIIU_DEBUG_TELEMETRY>"
+    )
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Android" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
     set(Source_Files__Port
         ${CMAKE_CURRENT_SOURCE_DIR}/port/mobile/MobileImpl.cpp

@@ -152,7 +152,6 @@ if (CMAKE_SYSTEM_NAME STREQUAL "CafeOS")
     target_compile_definitions(libultraship PRIVATE
         $<$<CONFIG:Debug>:_DEBUG>
         $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
-        $<$<BOOL:${SOH_WIIU_DEBUG_TELEMETRY}>:SOH_WIIU_DEBUG_TELEMETRY>
         SPDLOG_ACTIVE_LEVEL=3
     )
 elseif (CMAKE_SYSTEM_NAME STREQUAL "iOS")
