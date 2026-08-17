@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <map>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <sys/iosupport.h>
 
@@ -11,8 +12,6 @@
 #include <coreinit/debug.h>
 
 #include <SDL2/SDL.h>
-
-#include "ship/Context.h"
 
 namespace Ship {
 namespace WiiU {
@@ -103,9 +102,8 @@ void ThrowInvalidOTR() {
     OSFatal("Invalid OTR files! Try regenerating them!");
 }
 
-static void UpdateVPADButton(VPADStatus* status, SDL_GameController* controller, VPADButtons button, SDL_GameControllerButton sdl_button)
-{
-    if (SDL_GameControllerGetButton(controller, sdl_button) != 0) {
+static void UpdateVPADButtonState(VPADStatus* status, VPADButtons button, bool pressed) {
+    if (pressed) {
         // Set the trigger bit if it wasn't held before
         if (!(status->hold & button)) {
             status->trigger |= button;
@@ -128,9 +126,13 @@ static void UpdateVPADButton(VPADStatus* status, SDL_GameController* controller,
     }
 }
 
-static void UpdateKPADProButton(KPADStatus* status, SDL_GameController* controller, WPADProButton button, SDL_GameControllerButton sdl_button)
-{
-    if (SDL_GameControllerGetButton(controller, sdl_button) != 0) {
+static void UpdateVPADButton(VPADStatus* status, SDL_GameController* controller, VPADButtons button,
+                             SDL_GameControllerButton sdlButton) {
+    UpdateVPADButtonState(status, button, SDL_GameControllerGetButton(controller, sdlButton) != 0);
+}
+
+static void UpdateKPADProButtonState(KPADStatus* status, WPADProButton button, bool pressed) {
+    if (pressed) {
         // Set the trigger bit if it wasn't held before
         if (!(status->pro.hold & button)) {
             status->pro.trigger |= button;
@@ -151,6 +153,20 @@ static void UpdateKPADProButton(KPADStatus* status, SDL_GameController* controll
         status->pro.hold &= ~button;
         status->pro.trigger &= ~button;
     }
+}
+
+static void UpdateKPADProButton(KPADStatus* status, SDL_GameController* controller, WPADProButton button,
+                                SDL_GameControllerButton sdlButton) {
+    UpdateKPADProButtonState(status, button, SDL_GameControllerGetButton(controller, sdlButton) != 0);
+}
+
+static float GetControllerAxis(SDL_GameController* controller, SDL_GameControllerAxis axis) {
+    const Sint16 value = SDL_GameControllerGetAxis(controller, axis);
+    return value < 0 ? static_cast<float>(value) / 32768.0f : static_cast<float>(value) / 32767.0f;
+}
+
+static bool GetControllerTrigger(SDL_GameController* controller, SDL_GameControllerAxis axis) {
+    return SDL_GameControllerGetAxis(controller, axis) > 16384;
 }
 
 void Update() {
@@ -198,20 +214,62 @@ void Update() {
         updateControllers = false;
     }
 
-    // Reconstruct VPAD/KPAD from SDL input
-    // This is somewhat hacky, but we can't call VPADRead again or we steal inputs from SDL
-    // for (auto& [index, controller] : controllers) {
-    //     if (index == 0) {
-    //         UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_A,        SDL_CONTROLLER_BUTTON_A);
-    //         UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_B,        SDL_CONTROLLER_BUTTON_B);
-    //         UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_X,        SDL_CONTROLLER_BUTTON_X);
-    //         UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_Y,        SDL_CONTROLLER_BUTTON_Y);
-    //         UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_PLUS,     SDL_CONTROLLER_BUTTON_START);
-    //         UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_MINUS,    SDL_CONTROLLER_BUTTON_BACK);
-    //     } else {
+    // SDL owns the native VPAD/KPAD reads. Reconstruct the status structures from SDL's current controller state so
+    // the Wii U ImGui backend receives the same buttons and sticks as gameplay without consuming input twice.
+    for (auto& [index, controller] : controllers) {
+        if (index == 0) {
+            UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_A, SDL_CONTROLLER_BUTTON_A);
+            UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_B, SDL_CONTROLLER_BUTTON_B);
+            UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_X, SDL_CONTROLLER_BUTTON_X);
+            UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_Y, SDL_CONTROLLER_BUTTON_Y);
+            UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_PLUS, SDL_CONTROLLER_BUTTON_START);
+            UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_MINUS, SDL_CONTROLLER_BUTTON_BACK);
+            UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_LEFT, SDL_CONTROLLER_BUTTON_DPAD_LEFT);
+            UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_RIGHT, SDL_CONTROLLER_BUTTON_DPAD_RIGHT);
+            UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_UP, SDL_CONTROLLER_BUTTON_DPAD_UP);
+            UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_DOWN, SDL_CONTROLLER_BUTTON_DPAD_DOWN);
+            UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_L, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
+            UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_R, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
+            UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_STICK_L, SDL_CONTROLLER_BUTTON_LEFTSTICK);
+            UpdateVPADButton(&vpadStatus, controller, VPAD_BUTTON_STICK_R, SDL_CONTROLLER_BUTTON_RIGHTSTICK);
+            UpdateVPADButtonState(&vpadStatus, VPAD_BUTTON_ZL,
+                                  GetControllerTrigger(controller, SDL_CONTROLLER_AXIS_TRIGGERLEFT));
+            UpdateVPADButtonState(&vpadStatus, VPAD_BUTTON_ZR,
+                                  GetControllerTrigger(controller, SDL_CONTROLLER_AXIS_TRIGGERRIGHT));
 
-    //     }
-    // }
+            vpadStatus.leftStick.x = GetControllerAxis(controller, SDL_CONTROLLER_AXIS_LEFTX);
+            vpadStatus.leftStick.y = -GetControllerAxis(controller, SDL_CONTROLLER_AXIS_LEFTY);
+            vpadStatus.rightStick.x = GetControllerAxis(controller, SDL_CONTROLLER_AXIS_RIGHTX);
+            vpadStatus.rightStick.y = -GetControllerAxis(controller, SDL_CONTROLLER_AXIS_RIGHTY);
+        } else if (index > 0 && index <= 4) {
+            KPADStatus* status = &kpadStatus[index - 1];
+            status->extensionType = WPAD_EXT_PRO_CONTROLLER;
+
+            UpdateKPADProButton(status, controller, WPAD_PRO_BUTTON_A, SDL_CONTROLLER_BUTTON_A);
+            UpdateKPADProButton(status, controller, WPAD_PRO_BUTTON_B, SDL_CONTROLLER_BUTTON_B);
+            UpdateKPADProButton(status, controller, WPAD_PRO_BUTTON_X, SDL_CONTROLLER_BUTTON_X);
+            UpdateKPADProButton(status, controller, WPAD_PRO_BUTTON_Y, SDL_CONTROLLER_BUTTON_Y);
+            UpdateKPADProButton(status, controller, WPAD_PRO_BUTTON_PLUS, SDL_CONTROLLER_BUTTON_START);
+            UpdateKPADProButton(status, controller, WPAD_PRO_BUTTON_MINUS, SDL_CONTROLLER_BUTTON_BACK);
+            UpdateKPADProButton(status, controller, WPAD_PRO_BUTTON_LEFT, SDL_CONTROLLER_BUTTON_DPAD_LEFT);
+            UpdateKPADProButton(status, controller, WPAD_PRO_BUTTON_RIGHT, SDL_CONTROLLER_BUTTON_DPAD_RIGHT);
+            UpdateKPADProButton(status, controller, WPAD_PRO_BUTTON_UP, SDL_CONTROLLER_BUTTON_DPAD_UP);
+            UpdateKPADProButton(status, controller, WPAD_PRO_BUTTON_DOWN, SDL_CONTROLLER_BUTTON_DPAD_DOWN);
+            UpdateKPADProButton(status, controller, WPAD_PRO_TRIGGER_L, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
+            UpdateKPADProButton(status, controller, WPAD_PRO_TRIGGER_R, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
+            UpdateKPADProButton(status, controller, WPAD_PRO_BUTTON_STICK_L, SDL_CONTROLLER_BUTTON_LEFTSTICK);
+            UpdateKPADProButton(status, controller, WPAD_PRO_BUTTON_STICK_R, SDL_CONTROLLER_BUTTON_RIGHTSTICK);
+            UpdateKPADProButtonState(status, WPAD_PRO_TRIGGER_ZL,
+                                     GetControllerTrigger(controller, SDL_CONTROLLER_AXIS_TRIGGERLEFT));
+            UpdateKPADProButtonState(status, WPAD_PRO_TRIGGER_ZR,
+                                     GetControllerTrigger(controller, SDL_CONTROLLER_AXIS_TRIGGERRIGHT));
+
+            status->pro.leftStick.x = GetControllerAxis(controller, SDL_CONTROLLER_AXIS_LEFTX);
+            status->pro.leftStick.y = -GetControllerAxis(controller, SDL_CONTROLLER_AXIS_LEFTY);
+            status->pro.rightStick.x = GetControllerAxis(controller, SDL_CONTROLLER_AXIS_RIGHTX);
+            status->pro.rightStick.y = -GetControllerAxis(controller, SDL_CONTROLLER_AXIS_RIGHTY);
+        }
+    }
 
     if (hasVpad) {
         vpadStatus.tpNormal.touched = false;
