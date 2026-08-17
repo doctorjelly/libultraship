@@ -3,6 +3,10 @@
 
 namespace Ship {
 ConnectedPhysicalDeviceManager::ConnectedPhysicalDeviceManager() {
+#ifdef __WIIU__
+    // Wii U initializes SDL before constructing the control deck, so enumerate devices already present.
+    RefreshConnectedSDLGamepads();
+#endif
 }
 
 ConnectedPhysicalDeviceManager::~ConnectedPhysicalDeviceManager() {

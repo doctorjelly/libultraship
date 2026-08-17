@@ -157,7 +157,8 @@ void Update() {
     SDL_PumpEvents();
 
     SDL_Event event;
-    while (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_CONTROLLERDEVICEADDED, SDL_CONTROLLERDEVICEREMOVED) > 0) {
+    // Leave controller events queued for SDLAddRemoveDeviceEventHandler to update gameplay input.
+    if (SDL_PeepEvents(&event, 1, SDL_PEEKEVENT, SDL_CONTROLLERDEVICEADDED, SDL_CONTROLLERDEVICEREMOVED) > 0) {
         updateControllers = true;
     }
 
