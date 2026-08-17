@@ -45,7 +45,7 @@ static void InstallHeapDiagnostics() {
 
 // WUT traverses its constructor list backwards. A raw .ctors entry is placed
 // after compiler-generated .init_array entries, so this runs before C++ globals.
-__attribute__((used, section(".ctors"))) static void (*const sHeapDiagnosticsInitializer)() =
+__attribute__((used, section(".ctors"))) static void (*sHeapDiagnosticsInitializer)() =
     InstallHeapDiagnostics;
 
 static bool updateControllers;
