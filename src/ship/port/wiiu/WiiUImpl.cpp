@@ -164,20 +164,28 @@ void Update() {
 
     // SDL controller mappings poll current state rather than consuming axis/button events. Drain everything except
     // device add/remove events so analog input does not make the SDL event queue grow indefinitely.
+#ifdef SOH_WIIU_DEBUG_TELEMETRY
     static uint32_t discardedEventCount = 0;
+#endif
     while (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_CONTROLLERDEVICEADDED - 1) > 0) {
+#ifdef SOH_WIIU_DEBUG_TELEMETRY
         discardedEventCount++;
+#endif
     }
     while (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_CONTROLLERDEVICEREMOVED + 1, SDL_LASTEVENT) > 0) {
+#ifdef SOH_WIIU_DEBUG_TELEMETRY
         discardedEventCount++;
+#endif
     }
 
+#ifdef SOH_WIIU_DEBUG_TELEMETRY
     static uint32_t diagnosticUpdateCount = 0;
     if (++diagnosticUpdateCount == 60) {
         OSReport("[SoH][input] discarded_non_device_events=%u\n", discardedEventCount);
         diagnosticUpdateCount = 0;
         discardedEventCount = 0;
     }
+#endif
 
     if (updateControllers) {
         for (auto& [index, controller] : controllers) {

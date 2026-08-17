@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.24.0)
 
 option(NON_PORTABLE "Build a non-portable version" OFF)
+option(SOH_WIIU_DEBUG_TELEMETRY "Emit Wii U input and performance telemetry through OSReport" OFF)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     option(SIGN_LIBRARY "Enable xcode signing" OFF)
@@ -9,6 +10,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
 endif()
 
 project(libultraship LANGUAGES C CXX)
+
+if(SOH_WIIU_DEBUG_TELEMETRY AND NOT CMAKE_SYSTEM_NAME STREQUAL "CafeOS")
+    message(FATAL_ERROR "SOH_WIIU_DEBUG_TELEMETRY is only supported for CafeOS builds")
+endif()
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
     enable_language(OBJCXX)
