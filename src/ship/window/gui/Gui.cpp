@@ -447,8 +447,13 @@ void Gui::ApplyResolutionChanges() {
 
     const uint32_t minResolutionWidth = 320;
     const uint32_t minResolutionHeight = 240;
+#ifdef __WIIU__
+    const uint32_t maxResolutionWidth = WIIU_DEFAULT_FB_WIDTH;
+    const uint32_t maxResolutionHeight = WIIU_DEFAULT_FB_HEIGHT;
+#else
     const uint32_t maxResolutionWidth = 8096;  // the renderer's actual limit is 16384
     const uint32_t maxResolutionHeight = 4320; // on either axis. if you have the VRAM for it.
+#endif
     uint32_t newWidth;
     uint32_t newHeight;
     mInterpreter.lock()->GetCurDimensions(&newWidth, &newHeight);

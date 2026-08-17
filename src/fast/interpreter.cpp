@@ -4680,6 +4680,10 @@ void Interpreter::SetNativeDimensions(float width, float height) {
 }
 
 void Interpreter::SetResolutionMultiplier(float multiplier) {
+#ifdef __WIIU__
+    // The Wii U renders to a fixed 1080p GX2 target. Supersampling beyond that can exhaust the foreground heap.
+    multiplier = std::clamp(multiplier, 0.5f, 1.0f);
+#endif
     mCurDimensions.internal_mul = multiplier;
 }
 
