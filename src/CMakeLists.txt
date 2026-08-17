@@ -44,9 +44,13 @@ target_include_directories(libultraship
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${INCLUDE_DIR} ${ADDITIONAL_LIB_INCLUDES}
 )
 
+if (CMAKE_SYSTEM_NAME STREQUAL "CafeOS")
+    target_include_directories(libultraship PRIVATE ${DEVKITPRO}/portlibs/wiiu/include/)
+endif()
+
 #=================== Linking ===================
 if(INCLUDE_MPQ_SUPPORT)
-    if (NOT CMAKE_SYSTEM_NAME STREQUAL "Windows" AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    if (NOT CMAKE_SYSTEM_NAME STREQUAL "Windows" AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS" AND NOT CMAKE_SYSTEM_NAME STREQUAL "CafeOS")
         target_link_libraries(libultraship PUBLIC "$<LINK_LIBRARY:WHOLE_ARCHIVE,storm>")
     else()
         target_link_libraries(libultraship PUBLIC storm)
@@ -106,7 +110,9 @@ if (USE_OPENGLES)
     endif()
 endif()
 
-target_link_libraries(libultraship PUBLIC prism)
+if (NOT CMAKE_SYSTEM_NAME STREQUAL "CafeOS")
+    target_link_libraries(libultraship PUBLIC prism)
+endif()
 
 #=================== Compile Options & Defs ===================
 
@@ -142,7 +148,13 @@ if(NOT SPDLOG_MIN_CUTOFF IN_LIST LOG_LEVELS)
     message(FATAL_ERROR "SPDLOG_MIN_CUTOFF must be one of ${LOG_LEVELS}")
 endif()
 
-if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+if (CMAKE_SYSTEM_NAME STREQUAL "CafeOS")
+    target_compile_definitions(libultraship PRIVATE
+        $<$<CONFIG:Debug>:_DEBUG>
+        $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
+        SPDLOG_ACTIVE_LEVEL=3
+    )
+elseif (CMAKE_SYSTEM_NAME STREQUAL "iOS")
     target_compile_definitions(libultraship PRIVATE
         $<$<CONFIG:Debug>:_DEBUG>
         $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
@@ -227,4 +239,3 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU|Clang")
     )
     endif()
 endif()
-

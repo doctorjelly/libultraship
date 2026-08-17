@@ -72,7 +72,13 @@ target_sources(libultraship PRIVATE ${Source_Files__Utils})
 
 #=================== Port ===================
 
-if (CMAKE_SYSTEM_NAME STREQUAL "Android" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
+if (CMAKE_SYSTEM_NAME STREQUAL "CafeOS")
+    set(Source_Files__Port
+        ${CMAKE_CURRENT_SOURCE_DIR}/port/wiiu/WiiUImpl.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/port/wiiu/ImGui/imgui_impl_gx2.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/port/wiiu/ImGui/imgui_impl_wiiu.cpp
+    )
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Android" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
     set(Source_Files__Port
         ${CMAKE_CURRENT_SOURCE_DIR}/port/mobile/MobileImpl.cpp
     )

@@ -315,6 +315,9 @@ WindowBackend Config::GetWindowBackend() {
 #ifdef ENABLE_DX11
     return WindowBackend::FAST3D_DXGI_DX11;
 #endif
+#ifdef __WIIU__
+    return WindowBackend::FAST3D_WIIU_GX2;
+#endif
 #ifdef __APPLE__
     if (Metal_IsSupported()) {
         return WindowBackend::FAST3D_SDL_METAL;

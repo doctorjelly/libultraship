@@ -1740,10 +1740,20 @@ void Interpreter::GfxSpTri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx
             if (clampS) {
                 mBufVbo[mBufVboLen++] = (tex_width2[t] - 0.5f) / tex_width[t];
             }
+#ifdef __WIIU__
+            else {
+                mBufVbo[mBufVboLen++] = 0.0f;
+            }
+#endif
 
             if (clampT) {
                 mBufVbo[mBufVboLen++] = (tex_height2[t] - 0.5f) / tex_height[t];
             }
+#ifdef __WIIU__
+            else {
+                mBufVbo[mBufVboLen++] = 0.0f;
+            }
+#endif
         }
 
         if (use_fog) {
@@ -1821,6 +1831,11 @@ void Interpreter::GfxSpTri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx
                     mBufVbo[mBufVboLen++] = color->r / 255.0f;
                     mBufVbo[mBufVboLen++] = color->g / 255.0f;
                     mBufVbo[mBufVboLen++] = color->b / 255.0f;
+#ifdef __WIIU__
+                    if (!use_alpha) {
+                        mBufVbo[mBufVboLen++] = 1.0f;
+                    }
+#endif
                 } else {
                     if (use_fog && color == &v_arr[i]->color) {
                         // Shade alpha is 100% for fog
@@ -3600,6 +3615,13 @@ bool gfx_read_fb_handler_custom(F3DGfx** cmd0) {
     }
 #endif
 
+#ifdef __WIIU__
+    // GX2 readback is little-endian even though the Wii U CPU is big-endian.
+    for (size_t i = 0; i < static_cast<size_t>(width) * height; i++) {
+        rgba16Buffer[i] = __builtin_bswap16(rgba16Buffer[i]);
+    }
+#endif
+
     return false;
 }
 
@@ -4254,12 +4276,19 @@ void Interpreter::Init(class GfxWindowBackend* wapi, class GfxRenderingAPI* rapi
     mWapi->Init(game_name, rapi->GetName(), start_in_fullscreen, width, height, posX, posY);
     mRapi->Init();
     mRapi->UpdateFramebufferParameters(0, width, height, 1, false, true, true, true);
+#ifdef __WIIU__
+    mCurDimensions.internal_mul = 1.0f;
+    mMsaaLevel = 1;
+    mCurDimensions.width = 1920;
+    mCurDimensions.height = 1080;
+    mGameWindowViewport = { 0, 0, 1920, 1080 };
+#else
     mCurDimensions.internal_mul =
         Ship::Context::GetInstance()->GetConsoleVariables()->GetFloat(CVAR_INTERNAL_RESOLUTION, 1);
     mMsaaLevel = Ship::Context::GetInstance()->GetConsoleVariables()->GetInteger(CVAR_MSAA_VALUE, 1);
-
     mCurDimensions.width = width;
     mCurDimensions.height = height;
+#endif
 
     mGameFb = mRapi->CreateFramebuffer();
     mGameFbMsaaResolved = mRapi->CreateFramebuffer();
