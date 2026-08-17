@@ -3,12 +3,14 @@
 
 #include <stdio.h>
 #include <map>
+#include <new>
 #include <unistd.h>
 #include <sys/iosupport.h>
 
 #include <whb/log.h>
 #include <whb/log_udp.h>
 #include <coreinit/debug.h>
+#include <coreinit/memexpheap.h>
 
 #include <SDL2/SDL.h>
 
@@ -16,6 +18,30 @@
 
 namespace Ship {
 namespace WiiU {
+
+static void* sSbrkBase;
+static uint32_t sSbrkCapacity;
+
+static void ReportHeap(const char* stage) {
+    void* currentBreak = sbrk(0);
+    uint32_t claimed = reinterpret_cast<uintptr_t>(currentBreak) - reinterpret_cast<uintptr_t>(sSbrkBase);
+    uint32_t remaining = claimed < sSbrkCapacity ? sSbrkCapacity - claimed : 0;
+    OSReport("[SoH][heap] %s: base=0x%08X break=0x%08X claimed=%u capacity=%u remaining=%u\n", stage,
+             static_cast<uint32_t>(reinterpret_cast<uintptr_t>(sSbrkBase)),
+             static_cast<uint32_t>(reinterpret_cast<uintptr_t>(currentBreak)), claimed, sSbrkCapacity, remaining);
+}
+
+static void HandleOutOfMemory() {
+    ReportHeap("allocation failed");
+    std::set_new_handler(nullptr);
+}
+
+__attribute__((constructor(101))) static void InstallHeapDiagnostics() {
+    sSbrkBase = sbrk(0);
+    sSbrkCapacity = MEMGetSizeForMBlockExpHeap(sSbrkBase);
+    ReportHeap("before global constructors");
+    std::set_new_handler(HandleOutOfMemory);
+}
 
 static bool updateControllers;
 static std::map<int, SDL_GameController*> controllers;
@@ -54,6 +80,7 @@ static const devoptab_t dotab_stdout = {
 #endif
 
 void Init(const std::string& shortName) {
+    ReportHeap("global constructors complete");
 #ifdef _DEBUG
     WHBLogUdpInit();
     WHBLogPrint("Hello World!");
