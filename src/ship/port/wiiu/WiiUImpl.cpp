@@ -162,6 +162,13 @@ void Update() {
         updateControllers = true;
     }
 
+    // SDL controller mappings poll current state rather than consuming axis/button events. Drain everything except
+    // device add/remove events so analog input does not make the SDL event queue grow indefinitely.
+    while (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_CONTROLLERDEVICEADDED - 1) > 0) {
+    }
+    while (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_CONTROLLERDEVICEREMOVED + 1, SDL_LASTEVENT) > 0) {
+    }
+
     if (updateControllers) {
         for (auto& [index, controller] : controllers) {
             SDL_GameControllerClose(controller);
