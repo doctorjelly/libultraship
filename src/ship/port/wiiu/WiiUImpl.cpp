@@ -36,12 +36,17 @@ static void HandleOutOfMemory() {
     std::set_new_handler(nullptr);
 }
 
-__attribute__((constructor(101))) static void InstallHeapDiagnostics() {
+static void InstallHeapDiagnostics() {
     sSbrkBase = sbrk(0);
     sSbrkCapacity = MEMGetSizeForMBlockExpHeap(sSbrkBase);
     ReportHeap("before global constructors");
     std::set_new_handler(HandleOutOfMemory);
 }
+
+// WUT traverses its constructor list backwards. A raw .ctors entry is placed
+// after compiler-generated .init_array entries, so this runs before C++ globals.
+__attribute__((used, section(".ctors"))) static void (*const sHeapDiagnosticsInitializer)() =
+    InstallHeapDiagnostics;
 
 static bool updateControllers;
 static std::map<int, SDL_GameController*> controllers;
