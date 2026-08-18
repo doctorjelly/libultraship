@@ -91,6 +91,7 @@ bool GfxWiiUInitMem1() {
 }
 
 void gfx_wiiu_close(void) {
+    WHBProcStopRunning();
 }
 
 void GfxWiiUDestroyMem1() {
